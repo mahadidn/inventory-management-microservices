@@ -8,13 +8,18 @@ import com.mdn.management.grpc.order.OrderServiceGrpc
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
 import io.grpc.stub.StreamObserver
+import org.slf4j.LoggerFactory
 import org.springframework.grpc.server.service.GrpcService
+import org.springframework.kafka.core.KafkaTemplate
 
 @GrpcService
 class OrderGrpcService(
     private val inventoryStub: InventoryServiceGrpc.InventoryServiceBlockingStub,
     private val purchaseOrderRepository: PurchaseOrderRepository,
+    private val kafkaTemplate: KafkaTemplate<String, OrderCreatedEvent>
 ) : OrderServiceGrpc.OrderServiceImplBase() {
+
+    private val logger = LoggerFactory.getLogger(OrderGrpcService::class.java)
 
     override fun createOrder(
         request: CreateOrderRequest,
@@ -52,6 +57,27 @@ class OrderGrpcService(
                 status = "CREATED",
             )
         )
+
+        val savedOrderId = checkNotNull(savedOrder.id)
+
+        val orderCreatedEvent = OrderCreatedEvent(
+            orderId = savedOrderId,
+            productCode = savedOrder.productCode,
+            quantity = savedOrder.quantity
+        )
+
+        kafkaTemplate.send(OrderTopicConfig.ORDER_CREATED_TOPIC, savedOrder.productCode, orderCreatedEvent)
+            .whenComplete { sendResult, exception ->
+                if(exception != null){
+                    logger.error("Failed to publish OrderCreatedEvent for order {}", savedOrderId, exception)
+                } else {
+                    val metadata = sendResult.recordMetadata
+                    logger.info(
+                        "Published OrderCreatedEvent for order {} to topic {} partition {} offset {}",
+                        savedOrderId, metadata.topic(), metadata.partition(), metadata.offset()
+                    )
+                }
+            }
 
         val response = CreateOrderResponse.newBuilder()
             .setOrderId(checkNotNull(savedOrder.id))
