@@ -1,0 +1,19 @@
+coba pakai grpcurl, tapi install dulu disini, pake go:
+go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
+
+kalau mau uji dengan grpcurl:
+Biarkan aplikasi tetap jalan. Buka Git Bash baru di folder inventory-service, lalu jalankan:
+    grpcurl -plaintext \
+      -import-path src/main/proto -proto inventory.proto \
+      -d '{"product_code": "PIPE-001", "quantity": 10}' \
+      localhost:9090 inventory.InventoryService/CheckStock
+
+Penjelasan opsinya:
+    - plaintext: koneksi tanpa TLS, karena server localhost memang tidak memakai sertifikat.
+    - import-path src/main/proto -proto inventory.proto: grpcurl perlu tahu bentuk pesan yang akan
+      dikirim. Kita tunjukkan langsung file .proto-nya. Ada alternatif lain, yaitu fitur
+      reflection (server memberi tahu bentuk pesannya sendiri), tapi itu butuh dependency
+      tambahan io.grpc:grpc-services. Untuk sekarang, menunjuk file .proto lebih sederhana.
+    - d '{...}': isi request dalam bentuk JSON. grpcurl yang mengubahnya ke format biner Protobuf.
+    - inventory.InventoryService/CheckStock: format <package>.<Service>/<Method>. Bagian inventory
+      di depan berasal dari baris package inventory; di file .proto.
