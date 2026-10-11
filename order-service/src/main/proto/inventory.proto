@@ -1,0 +1,61 @@
+// syntax = "proto3"; menandakan file ini memakai Protocol Buffers versi 3,
+// versi yang dipakai sekarang.
+syntax = "proto3";
+
+/***
+ * package inventory; adalah nama package di “dunia gRPC”. Nama ini ikut menjadi bagian dari
+   nama service saat dipanggil lewat jaringan, yaitu inventory.InventoryService.
+ */
+package inventory;
+
+// option java_multiple_files = true; membuat setiap message dan service di-generate menjadi
+// file Java sendiri-sendiri (CheckStockRequest.java, CheckStockResponse.java, dan seterusnya).
+// Tanpa opsi ini, semuanya akan dibungkus dalam satu class besar.
+option java_multiple_files = true;
+// option java_package = "com.mdn.management.grpc.inventory"; adalah package untuk class Java
+// hasil generate. Sengaja saya tidak pakai com.mdn.management.inventory. Alasannya,
+// file .proto yang sama nanti akan disalin ke order-service dan api-gateway.
+// Kalau package-nya ...inventory, di dalam order-service akan muncul package bernama inventory,
+// dan itu membingungkan. Package ...grpc.inventory dibaca sebagai “kontrak gRPC milik inventory”,
+// dan namanya tetap masuk akal di project mana pun file ini disalin.
+option java_package = "com.mdn.management.grpc.inventory";
+
+// service InventoryService { rpc CheckStock (...) returns (...); } mendefinisikan satu layanan
+// dengan satu fungsi bernama CheckStock. Fungsi ini menerima CheckStockRequest dan mengembalikan
+// CheckStockResponse.
+service InventoryService {
+  rpc CheckStock (CheckStockRequest) returns (CheckStockResponse);
+}
+
+/**
+ * Angka = 1, = 2, = 3 bukan nilai default. Angka ini adalah nomor identitas field yang dipakai
+   saat data dikirim lewat jaringan. Protobuf tidak mengirim nama field, hanya nomornya, dan itu
+   yang membuatnya ringkas. Aturan pentingnya: begitu kontrak dipakai, nomor field tidak boleh
+   diubah.
+ * Penamaan field di .proto memakai snake_case (product_code). Di kode Kotlin nanti, nama itu
+   otomatis menjadi productCode.
+ */
+// message CheckStockRequest adalah isi pertanyaan: product_code (kode produk, misalnya PIPE-001)
+// dan quantity (jumlah yang dibutuhkan).
+message CheckStockRequest {
+  string product_code = 1;
+  int32 quantity = 2;
+}
+
+// message CheckStockResponse adalah isi jawaban: available (cukup atau tidak), current_stock
+// (stok saat ini), dan product_name (nama produk, supaya order-service bisa menampilkannya)
+message CheckStockResponse {
+  bool available = 1;
+  int32 current_stock = 2;
+  string product_name = 3;
+}
+
+
+/**
+ - Generate dan buktikan stub gRPC muncul, jalankan:
+   ./gradlew.bat generateProto
+ - Task generateProto dibuat oleh plugin Protobuf. Tugasnya membaca semua file di src/main/proto
+    lalu menghasilkan kode Java.
+ - setelah selesai, lihat hasilnya:
+   find build/generated -name "*.java"
+ */
