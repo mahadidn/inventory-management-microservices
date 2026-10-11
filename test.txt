@@ -17,3 +17,9 @@ Penjelasan opsinya:
     - d '{...}': isi request dalam bentuk JSON. grpcurl yang mengubahnya ke format biner Protobuf.
     - inventory.InventoryService/CheckStock: format <package>.<Service>/<Method>. Bagian inventory
       di depan berasal dari baris package inventory; di file .proto.
+
+
+kalau mau uji di order-service:
+     grpcurl -plaintext \
+      -d '{"product_code": "PIPE-001", "quantity": 5}' \
+      localhost:9091 order.OrderService/CreateOrder
